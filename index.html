@@ -74,9 +74,12 @@ h2.secao .conta{margin-left:auto;font-size:11px;color:var(--texto-fraco);
 .chip{border:1.5px solid rgba(143,156,232,.5);background:rgba(0,0,0,.2);color:var(--texto-fraco);
   font:inherit;font-size:12px;padding:6px 12px;border-radius:20px;cursor:pointer}
 .chip[aria-pressed="true"]{background:var(--ouro);border-color:var(--ouro);color:#2a1c00}
-.busca{width:100%;padding:11px 14px;border-radius:20px;font:inherit;font-size:14px;
+.busca{width:100%;padding:11px 38px 11px 14px;border-radius:20px;font:inherit;font-size:16px;
   background:rgba(0,0,0,.3);border:1.5px solid rgba(143,156,232,.45);color:var(--texto)}
 .busca::placeholder{color:#7e88bd}
+.campo{position:relative;display:block;width:100%}
+.limpa{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;border:0;background:rgba(143,156,232,.3);color:var(--texto);font-size:15px;line-height:28px;padding:0;cursor:pointer}
+.limpa[hidden]{display:none}
 textarea.caixa-texto{width:100%;height:130px;border-radius:12px;padding:10px 12px;
   background:rgba(0,0,0,.35);border:1.5px solid rgba(143,156,232,.45);color:var(--texto);
   font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.4;resize:vertical}
@@ -176,7 +179,7 @@ select{font:inherit;font-size:12.5px;padding:6px 10px;border-radius:20px;
   .grade{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
   .controles{display:flex;gap:10px;align-items:center}
   .controles #soLiberados{width:auto;flex:none;margin:0;padding:10px 16px}
-  .controles .busca{flex:1}
+  .controles .busca,.controles .campo{flex:1}
   .controles #ordem{width:auto;margin:0}
 }
 
@@ -194,7 +197,7 @@ select{font:inherit;font-size:12.5px;padding:6px 10px;border-radius:20px;
   h2.secao{margin:14px 0 8px}
   .p-topo{padding:8px 11px}
   .estrela{width:30px;height:30px;font-size:12px}
-  .busca{padding:8px 13px}
+  .busca{padding:8px 38px 8px 13px}
   .controles #soLiberados{padding:8px 14px}
   .filtros{margin:8px 0 6px}
   .chip{padding:5px 11px}
@@ -223,7 +226,7 @@ select{font:inherit;font-size:12.5px;padding:6px 10px;border-radius:20px;
   <section id="v-pers" class="oculto">
     <div class="controles">
       <button class="chip" id="soLiberados" aria-pressed="false">Hide the ones I haven't unlocked</button>
-      <input class="busca" id="busca" placeholder="Search character or franchise" autocomplete="off">
+      <span class="campo"><input class="busca" id="busca" placeholder="Search character or franchise" autocomplete="off"><button class="limpa" data-para="busca" aria-label="Clear search" hidden>✕</button></span>
       <select id="ordem" aria-label="Order">
         <option value="jogo">Order: as in the game</option>
         <option value="franquia">Order: by franchise</option>
@@ -236,7 +239,7 @@ select{font:inherit;font-size:12.5px;padding:6px 10px;border-radius:20px;
   <section id="v-miss" class="oculto"></section>
   <section id="v-comp" class="oculto"></section>
   <section id="v-guia" class="oculto">
-    <input class="busca" id="buscaG" placeholder="Search anything — fish, seed, recipe, quest, biome" autocomplete="off">
+    <span class="campo"><input class="busca" id="buscaG" placeholder="Search anything — fish, seed, recipe, quest, biome" autocomplete="off"><button class="limpa" data-para="buscaG" aria-label="Clear search" hidden>✕</button></span>
     <div class="filtros" id="filtrosG"></div>
     <div id="askWrap" class="oculto" style="margin:-4px 0 12px">
       <button class="botao cheio" id="askBtn" style="width:100%">Ask Claude about this</button>
@@ -1517,7 +1520,7 @@ function montarIndice(){
 }
 
 let termoG='', tipoG='all';
-const TIPOS=[['all','Everything'],['profit','Most profitable'],['gift','Gifts'],['flower','Flowers'],['critter','Critters'],['material','Materials'],['shop','Shops'],['gem','Ores & gems'],['craft','Crafting'],['questrec','Quest recipes'],['tip','Tips'],['item','Ingredients'],['fish','Fish'],['crop','Seeds & crops'],['recipe','Recipes'],['quest','Quests']];
+const TIPOS=[['all','Everything'],['profit','Most profitable'],['energy','Most energy'],['gift','Gifts'],['flower','Flowers'],['critter','Critters'],['material','Materials'],['shop','Shops'],['gem','Ores & gems'],['craft','Crafting'],['questrec','Quest recipes'],['tip','Tips'],['item','Ingredients'],['fish','Fish'],['crop','Seeds & crops'],['recipe','Recipes'],['quest','Quests']];
 
 function pendurarCompras(){
   const C=window.__COMPRA; if(!C) return;
@@ -1538,9 +1541,9 @@ function verFiltrosG(){
 function verGuia(){
   const el=document.getElementById('lista-guia');
   const q=termoG.trim().toLowerCase();
-  const lucros=tipoG==='profit';
-  let r=INDEX.filter(i=>(tipoG==='all'||i.t===tipoG||(lucros&&i.lucro))&&(!q||i.s.includes(q)));
-  if(lucros&&E.ui.soFazer) r=r.filter(i=>i.lucro.pode!==false);
+  const lucros=tipoG==='profit', energia=tipoG==='energy';
+  let r=INDEX.filter(i=>(tipoG==='all'||i.t===tipoG||(lucros&&i.lucro)||(energia&&i.t==='recipe'&&i.val&&i.val.energy))&&(!q||i.s.includes(q)));
+  if((lucros||energia)&&E.ui.soFazer) r=r.filter(i=>!i.lucro||i.lucro.pode!==false);
   if(!q&&tipoG==='all'){
     el.innerHTML=`<p class="nota" style="margin-bottom:14px">Type anything above — a fish, a seed, a dish, an ingredient, a biome or a quest name. Or pick a category.</p>
     <div class="caixa"><div class="numeros">
@@ -1554,14 +1557,17 @@ function verGuia(){
     <p class="nota">There is also an Ask Claude button — type a question instead of a keyword (“what sells for the most?”, “what can I cook with garlic?”) and it answers from this same data. Searching a colour with \u201cflower\u201d \u2014 \u201cred flower\u201d \u2014 shows every flower of that colour and whether you can pick it today. Searching a character's name brings up what they like as a gift. Searching an ingredient shows every dish that uses it — try "garlic" or "golden honey". Searching a biome shows everything you can get there — try "Dazzle Beach".</p>`;
     return;
   }
-  if(lucros) r.sort((a,b)=>(a.lucro.falta.length?1:0)-(b.lucro.falta.length?1:0) || b.lucro.v-a.lucro.v);
+  if(energia) r.sort((a,b)=>b.val.energy-a.val.energy || a.n.localeCompare(b.n));
+  else if(lucros) r.sort((a,b)=>(a.lucro.falta.length?1:0)-(b.lucro.falta.length?1:0) || b.lucro.v-a.lucro.v);
   else r.sort((a,b)=>{
     const an=a.n.toLowerCase().startsWith(q)?0:1, bn=b.n.toLowerCase().startsWith(q)?0:1;
     return an-bn || a.n.localeCompare(b.n);
   });
   const total=r.length;
   r=r.slice(0,120);
-  const topo = lucros ? `<p class="nota" style="margin-bottom:10px">Profit = what the dish sells for minus what every ingredient would sell for raw (fish, crops and Chez Remy's pantry included). "Any vegetable" uses the cheapest one the app knows. Dishes with an ingredient the app has no price for come last, marked "at most". Prices of base-game dishes are from 2022 guides. "Only what I can make now" hides dishes that need a biome you have not opened; dishes the app cannot check (biomes not on the Map tab) stay, with a note.</p>
+  const semEnergia=INDEX.filter(i=>i.t==='recipe'&&!(i.val&&i.val.energy)).length;
+  const topo = energia ? `<p class="nota" style="margin-bottom:10px">Energy each dish restores when you eat it, highest first. ${semEnergia} recipes (mostly from the newest expansions) have no energy value in the app yet, so they are not in this list.</p>
+    <div class="filtros" style="margin:0 0 10px"><button class="chip" id="soFazer" aria-pressed="${!!E.ui.soFazer}">Only what I can make now</button></div>` : lucros ? `<p class="nota" style="margin-bottom:10px">Profit = what the dish sells for minus what every ingredient would sell for raw (fish, crops and Chez Remy's pantry included). "Any vegetable" uses the cheapest one the app knows. Dishes with an ingredient the app has no price for come last, marked "at most". Prices of base-game dishes are from 2022 guides. "Only what I can make now" hides dishes that need a biome you have not opened; dishes the app cannot check (biomes not on the Map tab) stay, with a note.</p>
     <div class="filtros" style="margin:0 0 10px"><button class="chip" id="soFazer" aria-pressed="${!!E.ui.soFazer}">Only what I can make now</button></div>` : '';
   if(!total){ el.innerHTML=topo+'<p class="vazio">Nothing found. Try a shorter word.</p>'; ligaSoFazer(); return; }
   el.innerHTML=topo+`<p class="nota" style="margin-bottom:10px">${total} result${total>1?'s':''}${total>120?' — showing the first 120':''}</p>`+
@@ -1776,6 +1782,12 @@ document.getElementById('buscaG').oninput=e=>{
   document.getElementById('askOut').innerHTML=''; atualizaAsk();
 };
 document.getElementById('askBtn').onclick=perguntar;
+document.querySelectorAll('.limpa').forEach(b=>{
+  const inp=document.getElementById(b.dataset.para);
+  const mostra=()=>{ b.hidden=!inp.value; };
+  inp.addEventListener('input',mostra);
+  b.onclick=()=>{ inp.value=''; inp.dispatchEvent(new Event('input')); inp.focus(); };
+});
 
 carregar(); verTudo();
 </script>
