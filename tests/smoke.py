@@ -178,6 +178,19 @@ async def main():
         ok(top[:1] == ["Sand Stew"], f"Most energy starts with Sand Stew, 5,000 (got {top})")
         await pg.click('#filtrosG .chip[data-t="all"]')
 
+        print("11. Companions: one card per colour")
+        await pg.click('[data-v="comp"]')
+        cards = await pg.evaluate("""()=>COMP.map(c=>{ compAberto=c[0]; verComp();
+          const n=document.querySelectorAll('#v-comp .cor-lin').length; return [c[0], n, Math.max(c[6].length,1)]; })
+          .filter(([e,n,esp])=>n!==esp)""")
+        ok(not cards and not erros, f"every species shows one card per colour, no errors (wrong: {cards[:3]}, errors: {erros[:1]})")
+        tog = await pg.evaluate("""()=>{ compAberto='Foxes'; verComp(); delete E.comp['Foxes|Red'];
+          document.querySelector('#v-comp .cor-cx[data-comp="Foxes|Red"]').click(); const a=E.comp['Foxes|Red'];
+          document.querySelector('#v-comp .cor-cx[data-comp="Foxes|Red"]').click(); return [a||0, E.comp['Foxes|Red']||0]; }""")
+        ok(tog == [1, 0], f"tapping a colour's box marks and unmarks it as tamed (got {tog})")
+        ok(await pg.evaluate("()=>[...diasSet('Mon, Wed, Fri all day \\u00b7 Sun midnight\\u2013noon')].sort().join()") == "fri,mon,sun,wed",
+           "day set for 'out today' reads every day in the schedule")
+
         print("7. Size sanity")
         n = await pg.evaluate("()=>({guide:INDEX.length, chars:CHARS.length, recipes:INDEX.filter(i=>i.t==='recipe').length})")
         print("       ", n)
