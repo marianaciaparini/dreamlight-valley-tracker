@@ -96,17 +96,18 @@ h2.secao .conta{margin-left:auto;font-size:11px;color:var(--texto-fraco);
 .tag.hoje{background:rgba(242,196,92,.22);color:#f6d68a}
 .tag.agora{background:rgba(95,208,138,.28);color:#bff5d2}
 .cor-lin.com-foto{grid-template-columns:auto 1fr auto}
-.tv{display:grid;border:1px solid rgba(143,156,232,.3);border-radius:12px;overflow:hidden}
-.tv>div{padding:6px;border-right:1px solid rgba(143,156,232,.18);border-bottom:1px solid rgba(143,156,232,.18);min-height:54px}
-.tv .hd{background:rgba(143,156,232,.22);font-weight:600;text-align:center;min-height:0;padding:8px 4px;font-size:13px}
+.tv{display:grid;border:1px solid rgba(143,156,232,.3);border-radius:12px;overflow:hidden;background:#1a2156}
+.tv>div,.tv>.prog{min-width:0}
+.tv .hd{background:rgba(143,156,232,.22);font-weight:600;text-align:center;padding:8px 4px;font-size:13px;border-bottom:1px solid rgba(143,156,232,.3)}
 .tv .hd.ag{background:var(--ouro);color:#2a1c00}
-.tv .bio{font-weight:600;font-size:13px;display:flex;align-items:center;background:rgba(0,0,0,.25)}
-.tv .cel{display:flex;flex-wrap:wrap;gap:3px;align-content:flex-start}
-.tv .cel.ag{background:rgba(242,196,92,.10)}
-.tv .bicho{border:0;padding:0;background:rgba(255,255,255,.06);border-radius:8px;cursor:pointer;color:var(--texto)}
-.tv .bicho img{width:38px;height:38px;object-fit:contain;display:block}
-.tv .bicho.txt{font-size:11px;padding:4px 6px;line-height:1.2;text-align:left}
-.tv .sem{font-size:11px;color:#6f78a8;margin:auto}
+.tv .bio{font-weight:600;font-size:13px;display:flex;align-items:center;padding:6px 8px;background:rgba(0,0,0,.25);border-bottom:1px solid rgba(143,156,232,.25)}
+.tv .fundo{border-left:1px solid rgba(143,156,232,.15);border-bottom:1px solid rgba(143,156,232,.25)}
+.tv .fundo.ag{background:rgba(242,196,92,.10)}
+.tv .prog{position:relative;z-index:1;margin:3px;display:flex;align-items:center;gap:5px;padding:3px 6px 3px 3px;border-radius:9px;
+  border:1px solid rgba(143,156,232,.45);background:rgba(43,52,120,.92);color:var(--texto);text-align:left;cursor:pointer;overflow:hidden;font-size:11.5px;line-height:1.25}
+.tv .prog img{width:34px;height:34px;object-fit:contain;flex:none}
+.tv .prog span{overflow:hidden}
+.tv .prog em{color:#c9cff0;font-style:normal;font-size:10.5px}
 .cor-foto{width:64px;height:64px;object-fit:contain;grid-row:span 2;grid-column:3;align-self:center}
 textarea.caixa-texto{width:100%;height:130px;border-radius:12px;padding:10px 12px;
   background:rgba(0,0,0,.35);border:1.5px solid rgba(143,156,232,.45);color:var(--texto);
@@ -1364,8 +1365,10 @@ function apareceNa(txt,dt){
   return janelasDe(txt).some(j=>(j.d.has(d)&&(j.b>j.a? h>=j.a&&h<j.b : h>=j.a)) || (j.d.has(y)&&j.b<=j.a&&h<j.b));
 }
 function verNow(){
-  const el=document.getElementById('v-now'), agora=new Date(), cols=window.innerWidth>=700?6:3;
-  const horas=[...Array(cols)].map((_,i)=>new Date(agora.getFullYear(),agora.getMonth(),agora.getDate(),agora.getHours()+i,0));
+  const el=document.getElementById('v-now'), agora=new Date(), cols=4;
+  const hora0=new Date(agora.getFullYear(),agora.getMonth(),agora.getDate(),agora.getHours(),0);
+  const em=k=>new Date(hora0.getFullYear(),hora0.getMonth(),hora0.getDate(),hora0.getHours()+k,0);
+  const horas=[...Array(cols)].map((_,k)=>em(k));
   const bios={};
   COMP.forEach(([esp,,onde,,,,vars])=>vars.forEach(([v,vonde,q])=>{
     if(E.comp[chaveComp(esp,v)]) return;
@@ -1373,28 +1376,51 @@ function verNow(){
     if(temArea(lugar)!==true && temArea(onde)!==true) return;
     (bios[lugar]=bios[lugar]||[]).push({esp,v,q});
   }));
-  /* bioma sem nenhum bicho em nenhuma das horas mostradas sai da grade */
-  const nomes=Object.keys(bios).sort().filter(b=>horas.some(d=>bios[b].some(x=>apareceNa(x.q,d))));
-  if(!nomes.length){ el.innerHTML='<p class="vazio">Nothing to catch in the next few hours. Tick the biomes you have opened on the Map tab, or check back later.</p>'; return; }
-  const usadas=new Set();
-  let h=`<h2 class="secao">What you can catch, hour by hour</h2>
-    <div class="tv" style="grid-template-columns:minmax(92px,1.1fr) repeat(${cols},1fr)"><div class="hd" style="text-align:left">Biome</div>`+
-    horas.map((d,i)=>`<div class="hd ${i?'':'ag'}">${i?horaTxt(d.getHours()):'Now · '+horaTxt(d.getHours())}</div>`).join('');
-  nomes.forEach(b=>{
-    h+=`<div class="bio">${esc(b)}</div>`;
-    horas.forEach((d,i)=>{
-      const qs=bios[b].filter(x=>apareceNa(x.q,d));
-      h+=`<div class="cel ${i?'':'ag'}">`+(qs.length?qs.map(x=>{
-        usadas.add(x.esp);
-        const f=FOTOS[x.esp]&&FOTOS[x.esp][x.v], nome=x.v+' '+x.esp;
-        return f?`<button class="bicho" data-ir="${esc(x.esp)}" data-cor="${esc(x.v)}" title="${esc(nome)}"><img src="${f}" alt="${esc(nome)}"></button>`
-                :`<button class="bicho txt" data-ir="${esc(x.esp)}" data-cor="${esc(x.v)}">${esc(x.v)}<br>${esc(x.esp)}</button>`;
-      }).join(''):'<span class="sem">—</span>')+`</div>`;
+  /* cada cor vira 'programas': trechos seguidos de horas em que ela aparece; empilhados em faixas quando se sobrepoem */
+  const canais=[];
+  Object.keys(bios).sort().forEach(b=>{
+    const progs=[];
+    bios[b].forEach(x=>{
+      const tem=horas.map(d=>apareceNa(x.q,d));
+      for(let k=0;k<cols;k++){
+        if(!tem[k]||(k&&tem[k-1])) continue;
+        let f=k; while(f<cols&&tem[f]) f++;
+        /* ate' quando vai: procura so' ate' a meia-noite de hoje; se continua no dia seguinte, diz 'past midnight' */
+        const meiaNoite=24-hora0.getHours(); let fimReal=f; while(fimReal<meiaNoite&&apareceNa(x.q,em(fimReal))) fimReal++;
+        const passa=fimReal>=meiaNoite&&apareceNa(x.q,em(meiaNoite));
+        const desdeAntes=k===0&&apareceNa(x.q,em(-1));
+        progs.push({...x,ini:k,fim:f,ate:passa?null:em(fimReal).getHours(),desdeAntes});
+      }
     });
+    if(!progs.length) return;
+    progs.sort((a,c)=>a.ini-c.ini||(c.fim-c.ini)-(a.fim-a.ini));
+    const faixas=[];
+    progs.forEach(g=>{ let n=faixas.findIndex(fim=>fim<=g.ini); if(n<0){ n=faixas.length; faixas.push(0); } faixas[n]=g.fim; g.faixa=n; });
+    canais.push({b,progs,n:faixas.length});
   });
-  el.innerHTML=h+`</div><p class="nota" style="margin-top:8px">Only colours you have not tamed, in biomes you have opened. Tap one to open it in Companions. Uses this device's clock and changes every hour.${gsAtivo?'':' Pictures appear when your spreadsheet is connected and your script has the pictures folder.'}</p>`;
-  el.querySelectorAll('[data-ir]').forEach(b=>b.onclick=()=>{
-    compAberto=b.dataset.ir; document.querySelector('.aba[data-v="comp"]').click();
+  if(!canais.length){ el.innerHTML='<p class="vazio">Nothing to catch in the next 4 hours. Tick the biomes you have opened on the Map tab, or check back later.</p>'; return; }
+  const usadas=new Set();
+  let h=`<h2 class="secao">What you can catch in the next 4 hours</h2>
+    <div class="tv" style="grid-template-columns:minmax(84px,.9fr) repeat(${cols},1fr)"><div class="hd" style="text-align:left;grid-row:1;grid-column:1">Biome</div>`+
+    horas.map((d,k)=>`<div class="hd ${k?'':'ag'}" style="grid-row:1;grid-column:${k+2}">${k?horaTxt(d.getHours()):'Now · '+horaTxt(d.getHours())}</div>`).join('');
+  let linha=2;
+  canais.forEach(({b,progs,n})=>{
+    h+=`<div class="bio" data-bio="${esc(b)}" style="grid-row:${linha}/span ${n};grid-column:1">${esc(b)}</div>`;
+    for(let k=0;k<cols;k++) h+=`<div class="fundo ${k?'':'ag'}" style="grid-row:${linha}/span ${n};grid-column:${k+2}"></div>`;
+    progs.forEach(g=>{
+      usadas.add(g.esp);
+      const f=FOTOS[g.esp]&&FOTOS[g.esp][g.v], nome=g.v+' '+g.esp;
+      const quando=(g.ini===0? (g.desdeAntes?'on now':'starts now') : 'from '+horaTxt(horas[g.ini].getHours()))+
+        (g.ate===null?' · past midnight':' · until '+horaTxt(g.ate));
+      h+=`<button class="prog" data-ir="${esc(g.esp)}" data-cor="${esc(g.v)}" data-bio="${esc(b)}" title="${esc(nome)}"
+        style="grid-row:${linha+g.faixa};grid-column:${g.ini+2}/${g.fim+2}">
+        ${f?`<img src="${f}" alt="${esc(nome)}">`:''}<span><b>${esc(g.v)}</b> ${esc(g.esp)}<br><em>${esc(quando)}</em></span></button>`;
+    });
+    linha+=n;
+  });
+  el.innerHTML=h+`</div><p class="nota" style="margin-top:8px">Like a TV guide: each block is one colour you have not tamed, stretched over the hours it is out, in biomes you have opened. Tap one to open it in Companions. Uses this device's clock and changes every hour.${gsAtivo?'':' Pictures appear when your spreadsheet is connected and your script has the pictures folder.'}</p>`;
+  el.querySelectorAll('[data-ir]').forEach(x=>x.onclick=()=>{
+    compAberto=x.dataset.ir; document.querySelector('.aba[data-v="comp"]').click();
     const alvo=document.querySelector('#v-comp [data-esp="'+CSS.escape(compAberto)+'"]'); if(alvo) alvo.scrollIntoView({block:'start'});
   });
   usadas.forEach(e=>pedeFotos(e));

@@ -224,10 +224,19 @@ async def main():
           const b=document.querySelector('#v-now [data-ir]'); const esp=b&&b.dataset.ir; if(b) b.click();
           return {rows, hd, foi:!document.getElementById('v-comp').classList.contains('oculto')&&compAberto===esp}; }""")
         vaz = await pg.evaluate("""()=>{ document.querySelector('.aba[data-v="now"]').click();
-          return [...document.querySelectorAll('#v-now .bio')].filter(b=>{ let c=b.nextElementSibling, n=0;
-            while(c && !c.classList.contains('bio')){ n+=c.querySelectorAll('[data-ir]').length; c=c.nextElementSibling; } return n===0; }).map(b=>b.textContent); }""")
+          return [...document.querySelectorAll('#v-now .bio')].map(b=>b.dataset.bio)
+            .filter(b=>!document.querySelectorAll('#v-now .prog[data-bio="'+CSS.escape(b)+'"]').length); }""")
         ok(not vaz, f"Now tab has no empty biome rows (empty: {vaz})")
-        ok(nw["rows"] >= 5 and nw["hd"] == 4 and nw["foi"], f"Now tab: one row per opened biome, 3 hours on a phone in portrait, tap opens the companion (got {nw})")
+        ok(nw["rows"] >= 5 and nw["hd"] == 5 and nw["foi"], f"Now tab: one row per opened biome, 4 hours, tap opens the companion (got {nw})")
+        tv = await pg.evaluate("""()=>{ /* sabado 14h: Red Fox (Sat 4pm-10pm) entra as 16h e ocupa 2 colunas; Black Fox (Sat o dia todo) ocupa as 4 */
+          const real=Date; const fixo=new real(2026,10,7,14,10).getTime();
+          window.Date=class extends real{ constructor(...a){ super(...(a.length?a:[fixo])); } static now(){ return fixo; } };
+          AREAS.filter(g=>g.g==='Dreamlight Valley').forEach(g=>g.itens.forEach(x=>E.areas[g.g+'|'+x.n]=1));
+          delete E.comp['Foxes|Red']; delete E.comp['Foxes|Black']; verNow();
+          const col=c=>{ const b=document.querySelector('#v-now .prog[data-ir="Foxes"][data-cor="'+c+'"]'); return b?b.style.gridColumn.replace(/ /g,''):null; };
+          const r={red:col('Red'), black:col('Black'), txt:(document.querySelector('#v-now .prog[data-cor="Red"][data-ir="Foxes"] em')||{}).textContent};
+          window.Date=real; verNow(); return r; }""")
+        ok(tv == {"red": "4/6", "black": "2/6", "txt": "from 4pm · until 10pm"}, f"TV guide: a colour is one block across the hours it is out (got {tv})")
 
         print("7. Size sanity")
         n = await pg.evaluate("()=>({guide:INDEX.length, chars:CHARS.length, recipes:INDEX.filter(i=>i.t==='recipe').length})")
