@@ -1454,6 +1454,12 @@ function verNow(){
   });
   usadas.forEach(e=>pedeFotos(e));
 }
+/* pagina da wiki de cada cor: "<Cor> <Bicho>" (conferido na wiki em 08/11/2026: as 86 existem; as Classic de Skunk, Goose e Sweet Bee sao so' o nome do bicho) */
+const SING_COMP={"Squirrels":"Squirrel","Rabbits":"Rabbit","Sea Turtles":"Sea Turtle","Raccoons":"Raccoon","Crocodiles":"Crocodile","Sunbirds":"Sunbird","Foxes":"Fox","Ravens":"Raven","Monkeys":"Monkey","Cobras":"Cobra","Capybaras":"Capybara","Owls":"Owl","Baby Dragons":"Baby Dragon","Pegasi":"Pegasus","Skunks":"Skunk","Geese":"Goose","Sweet Bees":"Sweet Bee"};
+function paginaCor(esp,v){
+  const s=SING_COMP[esp]; if(!s||v==='—') return esp;
+  return (v==='Classic'&&/^(Skunks|Geese|Sweet Bees)$/.test(esp)) ? s : v+' '+s;
+}
 /* bolinha da cor: so' um auxilio visual, as cores sao escolha do app, nao do jogo */
 const COR_HEX={beige:'#d8c3a0',black:'#1d1d22',blue:'#5a8de0',brown:'#8a5a3a',dark:'#2b2b40',emerald:'#2fa36b',golden:'#e8b931',
   gray:'#9a9aa8',green:'#4fb560',orchid:'#c86fc9',peach:'#f4b08a',pink:'#f08bbd',purple:'#8e5ad6',red:'#c8352e',teal:'#2a9d9d',
@@ -1537,7 +1543,8 @@ function verComp(){
             <button class="cor-cx" data-comp="${esc(k)}" aria-pressed="${feito}" aria-label="Tamed: ${esc(v==='—'?esp:v)}">${feito?'✓':''}</button>
             <div class="cor-nome"><span class="cor-ponto" style="background:${pontoCor(v)}"></span>${esc(v==='—'?'Tamed':v)}
               ${sit==='now'?'<span class="tag agora">out now</span>':sit?'<span class="tag hoje">later today, from '+horaTxt(sit.mais)+'</span>':''}
-              ${feito?'<span class="tag" style="background:rgba(95,208,138,.2);color:#a9f0c4">tamed</span>':''}</div>
+              ${feito?'<span class="tag" style="background:rgba(95,208,138,.2);color:#a9f0c4">tamed</span>':''}
+              <a class="wiki-cor" href="${wiki(paginaCor(esp,v))}" target="_blank" rel="noopener" style="margin-left:auto;font-size:11px;font-weight:400;color:var(--peri);text-decoration:none">wiki</a></div>
             ${foto?`<img class="cor-foto" src="${foto}" alt="${esc(v)} ${esc(esp)}" loading="lazy">`:''}
             <div class="cor-info">
               ${lugar?`<span style="color:${ab===true?'#a9f0c4':ab===false?'#ffb9ad':'inherit'}">${esc(lugar)}${ab===false?' (locked)':''}</span><br>`:''}

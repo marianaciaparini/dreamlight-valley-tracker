@@ -238,6 +238,12 @@ async def main():
           window.Date=real; verNow(); return r; }""")
         ok(tv == {"red": "4/6", "black": "2/6", "txt": "from 4pm · until 10pm"}, f"TV guide: a colour is one block across the hours it is out (got {tv})")
 
+        cores = await pg.evaluate("""()=>{ const out=[]; COMP.forEach(c=>{ compAberto=c[0]; verComp();
+          c[6].forEach(v=>{ const card=document.querySelector('#v-comp .cor-cx[data-comp="'+c[0]+'|'+v[0]+'"]').closest('.cor-lin');
+            const a=card&&card.querySelector('a.wiki-cor'); out.push(a?decodeURIComponent(a.href.split('/').pop()):'SEM:'+c[0]+'|'+v[0]); }); });
+          compAberto=null; verComp(); return out; }""")
+        ok(len(cores) == 86 and not [c for c in cores if c.startswith('SEM')] and "Emerald_Sunbird" in cores and "Skunk" in cores and "Blue_and_Red_Striped_Cobra" in cores,
+           f"every colour card links to its own wiki page ({[c for c in cores if c.startswith('SEM')][:3]})")
         print("13. Fed today + count to tame")
         fed = await pg.evaluate("""()=>{ const real=Date; let dia=7;
           const usa=d=>{ const fixo=new real(2026,10,d,14,10).getTime();
