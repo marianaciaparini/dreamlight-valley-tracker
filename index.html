@@ -1386,8 +1386,8 @@ function verNow(){
       h+=`<div class="cel ${i?'':'ag'}">`+(qs.length?qs.map(x=>{
         usadas.add(x.esp);
         const f=FOTOS[x.esp]&&FOTOS[x.esp][x.v], nome=x.v+' '+x.esp;
-        return f?`<button class="bicho" data-ir="${esc(x.esp)}" title="${esc(nome)}"><img src="${f}" alt="${esc(nome)}"></button>`
-                :`<button class="bicho txt" data-ir="${esc(x.esp)}">${esc(x.v)}<br>${esc(x.esp)}</button>`;
+        return f?`<button class="bicho" data-ir="${esc(x.esp)}" data-cor="${esc(x.v)}" title="${esc(nome)}"><img src="${f}" alt="${esc(nome)}"></button>`
+                :`<button class="bicho txt" data-ir="${esc(x.esp)}" data-cor="${esc(x.v)}">${esc(x.v)}<br>${esc(x.esp)}</button>`;
       }).join(''):'<span class="sem">—</span>')+`</div>`;
     });
   });
@@ -1922,7 +1922,8 @@ async function perguntar(){
   btn.disabled=false; btn.textContent='Ask Claude about this';
 }
 
-function verTudo(){ montarIndice(); pendurarCompras(); try{ document.getElementById('ordem').value=(E.ui&&E.ui.ordem)||'jogo'; }catch(e){} pintaToggle(); verAreas(); verFiltros(); verPers(); verMiss(); verFiltrosG(); verGuia(); verProg(); }
+function verTudo(){ montarIndice(); pendurarCompras(); try{ document.getElementById('ordem').value=(E.ui&&E.ui.ordem)||'jogo'; }catch(e){} pintaToggle(); verAreas(); verFiltros(); verPers(); verMiss(); verFiltrosG(); verGuia(); verProg();
+  ['comp','now'].forEach(v=>{ const el=document.getElementById('v-'+v); if(el&&!el.classList.contains('oculto')) (v==='comp'?verComp:verNow)(); }); }
 document.querySelectorAll('.aba').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.aba').forEach(x=>x.setAttribute('aria-selected',x===b));
   ['areas','pers','miss','comp','now','guia','prog'].forEach(v=>
