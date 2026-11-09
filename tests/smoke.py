@@ -191,6 +191,34 @@ async def main():
         ok(await pg.evaluate("()=>[...diasSet('Mon, Wed, Fri all day \\u00b7 Sun midnight\\u2013noon')].sort().join()") == "fri,mon,sun,wed",
            "day set for 'out today' reads every day in the schedule")
 
+        print("12. Out now / later today / Can catch now, wiki link, photos")
+        sit = await pg.evaluate("""()=>{ const d=(y,m,dd,h)=>new Date(y,m-1,dd,h,5);   /* 07/11/2026 is a Saturday */
+          const red='Saturday 4pm\\u201310pm only (a 2023 guide said Saturday 2am\\u20138am)', gold='7\\u20138am and 7\\u20138pm, every day';
+          const f=x=>x==='now'?'now':x&&x.mais!==undefined?'later '+x.mais:'none';
+          return [f(situacaoHoje(red,d(2026,11,7,17))), f(situacaoHoje(red,d(2026,11,7,9))), f(situacaoHoje(red,d(2026,11,7,22))),
+                  f(situacaoHoje(red,d(2026,11,8,17))), f(situacaoHoje(gold,d(2026,11,8,12))), f(situacaoHoje(gold,d(2026,11,8,19))),
+                  f(situacaoHoje('Sunday',d(2026,11,8,3))), f(situacaoHoje('Midnight\\u20139am, every day',d(2026,11,8,8)))]; }""")
+        ok(sit == ["now", "later 16", "none", "none", "later 19", "now", "now", "now"], f"schedule vs clock (got {sit})")
+        ok(await pg.evaluate("()=>COMP.every(c=>c[6].every(v=>janelasDe(v[2]).length>0))"), "every colour's schedule turns into time windows")
+        await pg.click('[data-v="comp"]')
+        tem = await pg.evaluate("""()=>{ E.ui.soAgora=false; compAberto='Foxes'; verComp();
+          const link=[...document.querySelectorAll('#v-comp a')].some(a=>/Open Foxes on the wiki/.test(a.textContent));
+          const b=document.getElementById('soAgora'); b.click(); const on=E.ui.soAgora;
+          const soAgoraOk=[...document.querySelectorAll('#v-comp [data-esp]')].every(x=>{const c=COMP.find(k=>k[0]===x.dataset.esp); return podePegarAgora(c[0],c[2],c[6]);});
+          document.getElementById('soAgora').click(); return {link, on, soAgoraOk, off:E.ui.soAgora}; }""")
+        ok(tem == {"link": True, "on": True, "soAgoraOk": True, "off": False}, f"wiki link on top; Can catch now shows only catchable species (got {tem})")
+        foto = await pg.evaluate("""async()=>{ const velho=window.fetch; const png='data:image/png;base64,iVBORw0KGgo=';
+          window.fetch=async u=>({json:async()=>String(u).includes('img=Foxes')?{ok:true,imgs:{Red:png}}:{ok:true,payload:''}});
+          gsAtivo=true; GS_URL='https://script.google.com/macros/s/x/exec'; GS_SENHA='t';
+          localStorage.removeItem('my-valley-img-Foxes'); delete FOTOS.Foxes; delete FOTOS.Owls;
+          compAberto='Foxes'; verComp(); await new Promise(r=>setTimeout(r,200));
+          const n=document.querySelectorAll('#v-comp img.cor-foto').length;
+          compAberto='Owls'; verComp(); await new Promise(r=>setTimeout(r,200));
+          const m=document.querySelectorAll('#v-comp img.cor-foto').length;
+          window.fetch=velho; gsAtivo=false; GS_URL=''; GS_SENHA=null; localStorage.removeItem('my-valley-img-Foxes'); return [n,m]; }""")
+        ok(foto == [1, 0], f"photo shows when the script sends one; an older script (no photos) shows none (got {foto})")
+        ok(not erros, f"no errors after the companions checks ({erros[:1]})")
+
         print("7. Size sanity")
         n = await pg.evaluate("()=>({guide:INDEX.length, chars:CHARS.length, recipes:INDEX.filter(i=>i.t==='recipe').length})")
         print("       ", n)

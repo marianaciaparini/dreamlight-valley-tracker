@@ -11,6 +11,9 @@
 
 const SENHA = 'change-me';
 
+// Optional: Drive folder with companion pictures (see apps-script/README.md).
+const PASTA_FOTOS = 'Companion pictures';
+
 const ABA = 'estado';
 const ABA_HIST = 'histórico';
 const TAMANHO_PEDACO = 40000;            // limite seguro por célula
@@ -48,6 +51,7 @@ function abaHistorico() {
 function doGet(e) {
   const p = (e && e.parameter) || {};
   if (p.senha !== SENHA) return devolve({ erro: 'senha' });
+  if (p.img) return devolve(fotosDe(String(p.img)));
 
   const aba = abaEstado();
   const ultima = aba.getLastRow();
@@ -138,6 +142,25 @@ function aparar(hist) {
   if (excesso <= 0) return;
   // de baixo para cima, para os números de linha não mudarem no caminho
   automaticas.slice(0, excesso).reverse().forEach(function (l) { hist.deleteRow(l); });
+}
+
+/* Photos of one species: files named "<Species> - <Colour>.png" in the folder PASTA_FOTOS.
+   Returns { ok: true, imgs: { "<Colour>": "data:image/png;base64,..." } }; empty if the folder is missing. */
+function fotosDe(especie) {
+  const imgs = {};
+  const pastas = DriveApp.getFoldersByName(PASTA_FOTOS);
+  if (!pastas.hasNext()) return { ok: true, imgs: imgs };
+  const arquivos = pastas.next().getFiles();
+  const prefixo = especie + ' - ';
+  while (arquivos.hasNext()) {
+    const f = arquivos.next();
+    const nome = f.getName();
+    if (nome.indexOf(prefixo) !== 0) continue;
+    const cor = nome.slice(prefixo.length).replace(/\.[a-z]+$/i, '');
+    const blob = f.getBlob();
+    imgs[cor] = 'data:' + blob.getContentType() + ';base64,' + Utilities.base64Encode(blob.getBytes());
+  }
+  return { ok: true, imgs: imgs };
 }
 
 function devolve(objeto) {

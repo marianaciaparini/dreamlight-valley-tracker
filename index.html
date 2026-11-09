@@ -92,6 +92,9 @@ h2.secao .conta{margin-left:auto;font-size:11px;color:var(--texto-fraco);
 .cor-info{font-size:13px;line-height:1.45;color:#c9cff0}
 .cor-info b{color:#fff}
 .tag.hoje{background:rgba(242,196,92,.22);color:#f6d68a}
+.tag.agora{background:rgba(95,208,138,.28);color:#bff5d2}
+.cor-lin.com-foto{grid-template-columns:auto 1fr auto}
+.cor-foto{width:64px;height:64px;object-fit:contain;grid-row:span 2;grid-column:3;align-self:center}
 textarea.caixa-texto{width:100%;height:130px;border-radius:12px;padding:10px 12px;
   background:rgba(0,0,0,.35);border:1.5px solid rgba(143,156,232,.45);color:var(--texto);
   font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.4;resize:vertical}
@@ -1267,6 +1270,71 @@ function diasSet(txt){
   }).replace(/\b(mon|tue|wed|thu|fri|sat|sun)(?:day|sday|nesday|rsday|urday)?\b/g,(m,a)=>{ dias.add(a); return m; });
   return dias;
 }
+/* horario de uma cor -> janelas {d:Set de dias, a:hora inicial, b:hora final (24 = meia-noite do fim do dia)} */
+function horaNum(x,suf){
+  x=String(x).toLowerCase();
+  if(x==='midnight') return null; if(x==='noon') return 12;
+  let n=parseInt(x,10); if(isNaN(n)) return undefined;
+  if(suf==='am') return n===12?0:n; if(suf==='pm') return n===12?12:n+12; return n;
+}
+function janelasDe(txt){
+  const t=String(txt).replace(/\([^)]*\)/g,' '), out=[];
+  t.split(/·|;/).forEach(seg=>{
+    const sl=seg.toLowerCase(), d=diasSet(seg);
+    const re=/(midnight|noon|\d{1,2})\s*(am|pm)?\s*[–-]\s*(midnight|noon|\d{1,2})\s*(am|pm)?/g;
+    const faixas=[]; let m;
+    while((m=re.exec(sl))){
+      const sa=m[2]||m[4], sb=m[4]||m[2];
+      let a=horaNum(m[1],sa), b=horaNum(m[3],sb);
+      if(a===null) a=0; if(b===null) b=24;
+      if(a!==undefined&&b!==undefined) faixas.push([a,b]);
+    }
+    if(!faixas.length && (/all day/.test(sl) || d.size)) faixas.push([0,24]);
+    if(!faixas.length) return;
+    if(!d.size){ if(/every day|daily|all day/.test(sl)) DIAS_SEM.forEach(x=>d.add(x)); else return; }
+    faixas.forEach(([a,b])=>out.push({d,a,b}));
+  });
+  return out;
+}
+/* 'now' | {mais:hora} (aparece mais tarde hoje) | null, pelo relogio do aparelho */
+function situacaoHoje(txt,quando){
+  const dt=quando||new Date(), hoje=DIAS_SEM[(dt.getDay()+6)%7], ontem=DIAS_SEM[(dt.getDay()+5)%7], h=dt.getHours();
+  let prox=null;
+  for(const j of janelasDe(txt)){
+    if(j.d.has(hoje)){
+      if(j.b>j.a){ if(h>=j.a&&h<j.b) return 'now'; if(h<j.a&&(prox===null||j.a<prox)) prox=j.a; }
+      else { if(h>=j.a) return 'now'; if(prox===null||j.a<prox) prox=j.a; }   /* passa da meia-noite */
+    }
+    if(j.d.has(ontem)&&j.b<=j.a&&h<j.b) return 'now';
+  }
+  return prox===null?null:{mais:prox};
+}
+const horaTxt=h=>h===0?'midnight':h===12?'noon':(h%12)+(h<12?'am':'pm');
+function podePegarAgora(esp,onde,vars){
+  return vars.some(([v,vonde,quando])=>!E.comp[chaveComp(esp,v)] && situacaoHoje(quando)==='now'
+    && (temArea(vonde||onde)===true || temArea(onde)===true));
+}
+/* fotos: so' quando a planilha esta ligada e o script dela tem a pasta de fotos */
+const FOTOS={};
+async function pedeFotos(esp){
+  if(FOTOS[esp]!==undefined || !gsAtivo || !GS_URL || !GS_SENHA) return;
+  FOTOS[esp]=null;
+  try{ const c=localStorage.getItem('my-valley-img-'+esp); if(c){ FOTOS[esp]=JSON.parse(c); verComp(); return; } }catch(e){}
+  try{
+    const r=await fetch(GS_URL+'?senha='+encodeURIComponent(GS_SENHA)+'&img='+encodeURIComponent(esp),{cache:'no-store'});
+    const d=await r.json();
+    FOTOS[esp]=(d&&d.imgs)||{};
+    if(Object.keys(FOTOS[esp]).length){ try{ localStorage.setItem('my-valley-img-'+esp, JSON.stringify(FOTOS[esp])); }catch(e){} }
+  }catch(e){ FOTOS[esp]={}; }
+  if(compAberto===esp) verComp();
+}
+/* a tela muda sozinha na virada de cada hora e quando o app volta a aparecer */
+(function(){
+  const tic=()=>{ const v=document.getElementById('v-comp'); if(v&&!v.classList.contains('oculto')) verComp(); };
+  const proxima=()=>{ const d=new Date(); setTimeout(()=>{ tic(); proxima(); }, (60-d.getMinutes())*60000-d.getSeconds()*1000+2000); };
+  proxima();
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) tic(); });
+})();
 /* bolinha da cor: so' um auxilio visual, as cores sao escolha do app, nao do jogo */
 const COR_HEX={beige:'#d8c3a0',black:'#1d1d22',blue:'#5a8de0',brown:'#8a5a3a',dark:'#2b2b40',emerald:'#2fa36b',golden:'#e8b931',
   gray:'#9a9aa8',green:'#4fb560',orchid:'#c86fc9',peach:'#f4b08a',pink:'#f08bbd',purple:'#8e5ad6',red:'#c8352e',teal:'#2a9d9d',
@@ -1309,8 +1377,13 @@ function verComp(){
       <div><b>${COMP.filter(c=>temArea(c[2])===true||c[6].some(v=>temArea(v[1])===true)).length}</b><span>species you can reach</span></div>
       <div><b>${COMP.length}</b><span>species in the game</span></div>
     </div><p class="nota" style="margin-top:10px">Green means the biome is open on your map; dimmed means you cannot get there yet. Tap a species to open it, then tap a colour to mark it as tamed. A critter only becomes your companion after you feed it enough times — usually twice with the favourite food. The colours here match the ones Olaf's Grand Exhibition asks for \u2014 the favourite food counts double.</p></div>`;
+  const agoraN=COMP.filter(([e,,o,,,,vs])=>podePegarAgora(e,o,vs)).length;
+  h+=`<div class="filtros" style="margin:0 0 12px"><button class="chip" id="soAgora" aria-pressed="${!!E.ui.soAgora}">Can catch now (${agoraN})</button>
+    <span class="nota" style="align-self:center">Untamed colours out right now (${horaTxt(new Date().getHours())}, ${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getDay()]}) in a biome you have opened. Uses this device's clock.</span></div>`;
+  if(E.ui.soAgora&&!agoraN) h+='<p class="vazio">Nothing to catch right now. The list changes every hour.</p>';
   let mundoAtual='';
   COMP.forEach(([esp,mundo,onde,fav,gosta,como,vars])=>{
+    if(E.ui.soAgora && !podePegarAgora(esp,onde,vars)) return;
     if(mundo!==mundoAtual){ mundoAtual=mundo; h+=`<h2 class="secao">${esc(mundo)}</h2>`; }
     const lista = vars.length?vars:[['—',onde,'']];
     const ok = lista.filter(v=>E.comp[chaveComp(esp,v[0])]).length;
@@ -1331,7 +1404,7 @@ function verComp(){
         <span class="tag ${ok===lista.length?'ok':''}" style="margin-left:auto;${ok===lista.length?'background:rgba(95,208,138,.2);color:#a9f0c4':''}">${ok}/${lista.length}</span>
       </div>
       ${aberto?`<div style="padding:0 14px 14px;border-top:1px solid rgba(143,156,232,.25);padding-top:11px">
-      <div class="g-meta" style="margin-top:0">
+      <div class="g-meta" style="margin-top:0"><a href="${wiki(esp)}" target="_blank" rel="noopener">Open ${esc(esp)} on the wiki</a><br>
         ${fav?`Favourite: <em>${esc(fav)}</em><br>`:''}
         ${gosta?`Also likes: <em>${esc(gosta)}</em><br>`:''}
         ${como?`Taming: <em>${esc(como)}</em><br>`:''}
@@ -1340,22 +1413,24 @@ function verComp(){
       </div>
       <div class="cor-tab">${lista.map(([v,vonde,quando])=>({v,vonde,quando,feito:!!E.comp[chaveComp(esp,v)]}))
         .sort((a,b)=>a.feito-b.feito).map(({v,vonde,quando,feito})=>{
-          const k=chaveComp(esp,v), lugar=vonde||onde, ab=temArea(lugar), hojeSim=diasSet(quando).has(DIAS_SEM[(new Date().getDay()+6)%7]);
-          return `<div class="cor-lin ${feito?'feito':''}">
+          const k=chaveComp(esp,v), lugar=vonde||onde, ab=temArea(lugar), sit=feito?null:situacaoHoje(quando), foto=FOTOS[esp]&&FOTOS[esp][v];
+          return `<div class="cor-lin ${feito?'feito':''} ${foto?'com-foto':''}">
             <button class="cor-cx" data-comp="${esc(k)}" aria-pressed="${feito}" aria-label="Tamed: ${esc(v==='—'?esp:v)}">${feito?'✓':''}</button>
             <div class="cor-nome"><span class="cor-ponto" style="background:${pontoCor(v)}"></span>${esc(v==='—'?'Tamed':v)}
-              ${hojeSim&&!feito?'<span class="tag hoje">out today</span>':''}
+              ${sit==='now'?'<span class="tag agora">out now</span>':sit?'<span class="tag hoje">later today, from '+horaTxt(sit.mais)+'</span>':''}
               ${feito?'<span class="tag" style="background:rgba(95,208,138,.2);color:#a9f0c4">tamed</span>':''}</div>
+            ${foto?`<img class="cor-foto" src="${foto}" alt="${esc(v)} ${esc(esp)}" loading="lazy">`:''}
             <div class="cor-info">
               ${lugar?`<span style="color:${ab===true?'#a9f0c4':ab===false?'#ffb9ad':'inherit'}">${esc(lugar)}${ab===false?' (locked)':''}</span><br>`:''}
               ${quando?`<b>${esc(quando)}</b>`:''}${/flower/i.test(fav)?floresDe(quando,lugar):''}${v==='—'?'':tempoDomar(esp,v,quando)}
             </div></div>`;
         }).join('')}</div>
-      <div class="g-meta" style="margin-top:10px"><a href="${wiki(esp)}" target="_blank" rel="noopener">Pictures of every colour on the wiki</a></div>
       </div>`:''}
     </div>`;
   });
   el.innerHTML=h;
+  const sa=document.getElementById('soAgora'); if(sa) sa.onclick=()=>{ E.ui.soAgora=!E.ui.soAgora; salvar(); verComp(); };
+  if(compAberto) pedeFotos(compAberto);
   el.querySelectorAll('[data-esp]').forEach(x=>x.onclick=()=>{
     compAberto = compAberto===x.dataset.esp ? null : x.dataset.esp; verComp();
   });
