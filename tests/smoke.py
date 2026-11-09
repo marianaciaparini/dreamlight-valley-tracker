@@ -238,6 +238,21 @@ async def main():
           window.Date=real; verNow(); return r; }""")
         ok(tv == {"red": "4/6", "black": "2/6", "txt": "from 4pm · until 10pm"}, f"TV guide: a colour is one block across the hours it is out (got {tv})")
 
+        print("13. Fed today + count to tame")
+        fed = await pg.evaluate("""()=>{ const real=Date; let dia=7;
+          const usa=d=>{ const fixo=new real(2026,10,d,14,10).getTime();
+            window.Date=class extends real{ constructor(...a){ super(...(a.length?a:[fixo])); } static now(){ return fixo; } }; };
+          delete E.comp['Foxes|Black']; delete E.feed['Foxes|Black']; const k='Foxes|Black', r=[];
+          usa(7); verNow(); document.querySelector('#v-now .fed[data-feed="'+k+'"]').click();
+          r.push(E.feed[k].n, comeuHoje(k), document.querySelector('#v-now .prog[data-cor="Black"][data-ir="Foxes"]').classList.contains('comido'));
+          document.querySelector('#v-now .fed[data-feed="'+k+'"]').click(); r.push(E.feed[k].n, comeuHoje(k));   /* desfaz */
+          document.querySelector('#v-now .fed[data-feed="'+k+'"]').click();                                   /* 1 */
+          usa(8); r.push(comeuHoje(k)); alimenta('Foxes','Black'); alimenta('Foxes','Black'); r.push(E.feed[k].n);  /* dia 8: 2, desfaz -> 1 */
+          alimenta('Foxes','Black');                                                                          /* 2 */
+          [10,11,14].forEach(d=>{ usa(d); alimenta('Foxes','Black'); });                                      /* 3,4,5 -> confirma domada */
+          r.push(E.feed[k].n, !!E.comp[k]); window.Date=real; delete E.comp[k]; delete E.feed[k]; verNow(); return r; }""")
+        ok(fed == [1, True, True, 0, False, False, 1, 5, True], f"fed box: once a day, undo, resets next day, 5th feeding offers tamed (got {fed})")
+
         print("7. Size sanity")
         n = await pg.evaluate("()=>({guide:INDEX.length, chars:CHARS.length, recipes:INDEX.filter(i=>i.t==='recipe').length})")
         print("       ", n)

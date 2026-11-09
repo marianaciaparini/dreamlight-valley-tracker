@@ -105,6 +105,12 @@ h2.secao .conta{margin-left:auto;font-size:11px;color:var(--texto-fraco);
 .tv .fundo.ag{background:rgba(242,196,92,.10)}
 .tv .prog{position:relative;z-index:1;margin:3px;display:flex;align-items:center;gap:5px;padding:3px 6px 3px 3px;border-radius:9px;
   border:1px solid rgba(143,156,232,.45);background:rgba(43,52,120,.92);color:var(--texto);text-align:left;cursor:pointer;overflow:hidden;font-size:11.5px;line-height:1.25}
+.tv .prog{padding-right:34px}
+.tv .prog.comido{opacity:.5}
+.tv .prog .conta{color:#f6d68a}
+.tv .fed{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:7px;
+  border:2px solid rgba(143,156,232,.7);background:transparent;color:#2a1c00;font-weight:700;line-height:20px;padding:0;cursor:pointer}
+.tv .fed[aria-pressed="true"]{background:var(--verde);border-color:var(--verde)}
 .tv .prog img{width:34px;height:34px;object-fit:contain;flex:none}
 .tv .prog span{overflow:hidden}
 .tv .prog em{color:#c9cff0;font-style:normal;font-size:10.5px}
@@ -829,7 +835,7 @@ let E={areas:{},pers:{}};
    carregar() e' quem le o aparelho — nunca chame carregar() depois de
    trocar E por um backup, senao o estado antigo volta por cima. */
 function completar(){
-  if(!E.areas) E.areas={}; if(!E.pers) E.pers={}; if(!E.ui) E.ui={}; if(!E.comp) E.comp={}; if(!E.sq) E.sq={};
+  if(!E.areas) E.areas={}; if(!E.pers) E.pers={}; if(!E.ui) E.ui={}; if(!E.comp) E.comp={}; if(!E.sq) E.sq={}; if(!E.feed) E.feed={};
   AREAS.forEach(g=>g.itens.forEach(a=>{
     const k=g.g+'|'+a.n;
     if(E.areas[k]===undefined) E.areas[k]=a.on;
@@ -926,6 +932,7 @@ function riqueza(est){
     });
     n += Object.values(est.areas||{}).filter(Boolean).length;
     n += Object.keys(est.sq||{}).length;
+    Object.values(est.feed||{}).forEach(f=>{ n += (f&&f.n)||0; });
   }catch(e){}
   return n;
 }
@@ -1364,6 +1371,22 @@ function apareceNa(txt,dt){
   const d=DIAS_SEM[(dt.getDay()+6)%7], y=DIAS_SEM[(dt.getDay()+5)%7], h=dt.getHours();
   return janelasDe(txt).some(j=>(j.d.has(d)&&(j.b>j.a? h>=j.a&&h<j.b : h>=j.a)) || (j.d.has(y)&&j.b<=j.a&&h<j.b));
 }
+/* alimentacao: E.feed["Especie|Cor"] = {n: quantas vezes (uma por dia), d: 'aaaa-mm-dd' da ultima} */
+function hojeTxt(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function totalDomar(esp,v){ const n=DOMAR_VAR[esp+'|'+v]||DOMAR[esp]; return typeof n==='number'?n:null; }
+function comeuHoje(k){ const f=E.feed&&E.feed[k]; return !!(f&&f.d===hojeTxt()); }
+function vezesComeu(k){ const f=E.feed&&E.feed[k]; return (f&&f.n)||0; }
+function alimenta(esp,v){
+  const k=chaveComp(esp,v), f=E.feed[k]||{n:0,d:null};
+  if(f.d===hojeTxt()){ f.n=Math.max(0,f.n-1); f.d=f.prev||null; delete f.prev; }        /* desfaz a marca de hoje */
+  else { f.prev=f.d; f.n+=1; f.d=hojeTxt(); }
+  E.feed[k]=f; salvar();
+  const tot=totalDomar(esp,v);
+  if(f.d===hojeTxt() && tot && f.n>=tot && !E.comp[k] &&
+     confirm(v+' '+esp+': fed '+f.n+' of '+tot+' days.\n\nMark it as tamed? (Only if the game shows it as your companion; guides disagree on the number.)')){
+    E.comp[k]=1; salvar();
+  }
+}
 function verNow(){
   const el=document.getElementById('v-now'), agora=new Date(), cols=4;
   const hora0=new Date(agora.getFullYear(),agora.getMonth(),agora.getDate(),agora.getHours(),0);
@@ -1412,13 +1435,19 @@ function verNow(){
       const f=FOTOS[g.esp]&&FOTOS[g.esp][g.v], nome=g.v+' '+g.esp;
       const quando=(g.ini===0? (g.desdeAntes?'on now':'starts now') : 'from '+horaTxt(horas[g.ini].getHours()))+
         (g.ate===null?' · past midnight':' · until '+horaTxt(g.ate));
-      h+=`<button class="prog" data-ir="${esc(g.esp)}" data-cor="${esc(g.v)}" data-bio="${esc(b)}" title="${esc(nome)}"
+      const kf=chaveComp(g.esp,g.v), ja=comeuHoje(kf), vz=vezesComeu(kf), tot=totalDomar(g.esp,g.v);
+      const conta=vz?('fed '+vz+(tot?' of '+tot:'')):(tot?'0 of '+tot+' feedings':'');
+      h+=`<div class="prog ${ja?'comido':''}" role="button" tabindex="0" data-ir="${esc(g.esp)}" data-cor="${esc(g.v)}" data-bio="${esc(b)}" title="${esc(nome)}"
         style="grid-row:${linha+g.faixa};grid-column:${g.ini+2}/${g.fim+2}">
-        ${f?`<img src="${f}" alt="${esc(nome)}">`:''}<span><b>${esc(g.v)}</b> ${esc(g.esp)}<br><em>${esc(quando)}</em></span></button>`;
+        ${f?`<img src="${f}" alt="${esc(nome)}">`:''}<span><b>${esc(g.v)}</b> ${esc(g.esp)}<br><em>${ja?'fed today':esc(quando)}</em>${conta?`<br><em class="conta">${esc(conta)}</em>`:''}</span>
+        <button class="fed" data-feed="${esc(kf)}" aria-pressed="${ja}" aria-label="Fed ${esc(nome)} today">${ja?'\u2713':''}</button></div>`;
     });
     linha+=n;
   });
-  el.innerHTML=h+`</div><p class="nota" style="margin-top:8px">Like a TV guide: each block is one colour you have not tamed, stretched over the hours it is out, in biomes you have opened. Tap one to open it in Companions. Uses this device's clock and changes every hour.${gsAtivo?'':' Pictures appear when your spreadsheet is connected and your script has the pictures folder.'}</p>`;
+  el.innerHTML=h+`</div><p class="nota" style="margin-top:8px">Like a TV guide: each block is one colour you have not tamed, stretched over the hours it is out, in biomes you have opened. Tick the box when you feed one (only the first feeding of the day counts; it resets at midnight). Tap the picture to open it in Companions. Uses this device's clock and changes every hour.${gsAtivo?'':' Pictures appear when your spreadsheet is connected and your script has the pictures folder.'}</p>`;
+  el.querySelectorAll('.fed').forEach(x=>x.onclick=e=>{
+    e.stopPropagation(); const [esp,v]=x.dataset.feed.split('|'); alimenta(esp,v); verNow();
+  });
   el.querySelectorAll('[data-ir]').forEach(x=>x.onclick=()=>{
     compAberto=x.dataset.ir; document.querySelector('.aba[data-v="comp"]').click();
     const alvo=document.querySelector('#v-comp [data-esp="'+CSS.escape(compAberto)+'"]'); if(alvo) alvo.scrollIntoView({block:'start'});
@@ -1512,7 +1541,7 @@ function verComp(){
             ${foto?`<img class="cor-foto" src="${foto}" alt="${esc(v)} ${esc(esp)}" loading="lazy">`:''}
             <div class="cor-info">
               ${lugar?`<span style="color:${ab===true?'#a9f0c4':ab===false?'#ffb9ad':'inherit'}">${esc(lugar)}${ab===false?' (locked)':''}</span><br>`:''}
-              ${quando?`<b>${esc(quando)}</b>`:''}${/flower/i.test(fav)?floresDe(quando,lugar):''}${v==='—'?'':tempoDomar(esp,v,quando)}
+              ${quando?`<b>${esc(quando)}</b>`:''}${/flower/i.test(fav)?floresDe(quando,lugar):''}${v==='—'?'':tempoDomar(esp,v,quando)}${vezesComeu(k)&&!feito?`<br><span style="color:#f6d68a">Fed ${vezesComeu(k)}${totalDomar(esp,v)?' of '+totalDomar(esp,v):''} so far${comeuHoje(k)?' (today included)':''}</span>`:''}
             </div></div>`;
         }).join('')}</div>
       </div>`:''}
