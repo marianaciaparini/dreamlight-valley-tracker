@@ -84,6 +84,8 @@ h2.secao .conta{margin-left:auto;font-size:11px;color:var(--texto-fraco);
 .cor-lin{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:start;padding:9px 11px;border-radius:12px;
   background:rgba(0,0,0,.22);border:1px solid rgba(143,156,232,.25)}
 .cor-lin.feito{opacity:.55}
+.cor-lin.ag{border:2px solid var(--verde);box-shadow:0 0 0 3px rgba(95,208,138,.18)}
+.cor-lin.mt{border:2px solid rgba(242,196,92,.75)}
 .cor-cx{width:26px;height:26px;border-radius:7px;border:2px solid rgba(143,156,232,.6);background:transparent;color:#2a1c00;
   font-weight:700;line-height:22px;padding:0;grid-row:span 2;margin-top:1px;cursor:pointer}
 .cor-cx[aria-pressed="true"]{background:var(--verde);border-color:var(--verde)}
@@ -1400,7 +1402,7 @@ function verComp(){
         ? 'border-color:var(--verde);box-shadow:inset 4px 0 0 var(--verde)'
         : 'border-color:rgba(143,156,232,.25);opacity:.62'}">
       <div class="g-topo" data-esp="${esc(esp)}" style="cursor:pointer;padding:12px 14px;gap:8px;flex-wrap:wrap">
-        <b>${esc(esp)}</b><span class="tag critter">${esc(onde)}</span>${selo}
+        <b>${esc(esp)}</b><span class="tag critter">${esc(onde)}</span>${selo}${(()=>{ const n=vars.filter(([v,,q])=>!E.comp[chaveComp(esp,v)]&&situacaoHoje(q)==='now').length; return n?'<span class="tag agora">'+n+' out now</span>':''; })()}
         <span class="tag ${ok===lista.length?'ok':''}" style="margin-left:auto;${ok===lista.length?'background:rgba(95,208,138,.2);color:#a9f0c4':''}">${ok}/${lista.length}</span>
       </div>
       ${aberto?`<div style="padding:0 14px 14px;border-top:1px solid rgba(143,156,232,.25);padding-top:11px">
@@ -1414,7 +1416,7 @@ function verComp(){
       <div class="cor-tab">${lista.map(([v,vonde,quando])=>({v,vonde,quando,feito:!!E.comp[chaveComp(esp,v)]}))
         .sort((a,b)=>a.feito-b.feito).map(({v,vonde,quando,feito})=>{
           const k=chaveComp(esp,v), lugar=vonde||onde, ab=temArea(lugar), sit=feito?null:situacaoHoje(quando), foto=FOTOS[esp]&&FOTOS[esp][v];
-          return `<div class="cor-lin ${feito?'feito':''} ${foto?'com-foto':''}">
+          return `<div class="cor-lin ${feito?'feito':''} ${foto?'com-foto':''} ${sit==='now'?'ag':sit?'mt':''}">
             <button class="cor-cx" data-comp="${esc(k)}" aria-pressed="${feito}" aria-label="Tamed: ${esc(v==='—'?esp:v)}">${feito?'✓':''}</button>
             <div class="cor-nome"><span class="cor-ponto" style="background:${pontoCor(v)}"></span>${esc(v==='—'?'Tamed':v)}
               ${sit==='now'?'<span class="tag agora">out now</span>':sit?'<span class="tag hoje">later today, from '+horaTxt(sit.mais)+'</span>':''}
