@@ -202,7 +202,7 @@ async def main():
         ok(await pg.evaluate("()=>COMP.every(c=>c[6].every(v=>janelasDe(v[2]).length>0))"), "every colour's schedule turns into time windows")
         await pg.click('[data-v="comp"]')
         tem = await pg.evaluate("""()=>{ E.ui.soAgora=false; compAberto='Foxes'; verComp();
-          const link=[...document.querySelectorAll('#v-comp a')].some(a=>/Open Foxes on the wiki/.test(a.textContent));
+          const la=document.querySelector('#v-comp [data-esp="Foxes"] a.wiki-esp'); const link=!!la&&/Foxes$/.test(la.href)&&COMP.every(c=>document.querySelector('#v-comp [data-esp="'+c[0]+'"] a.wiki-esp'));
           const b=document.getElementById('soAgora'); b.click(); const on=E.ui.soAgora;
           const soAgoraOk=[...document.querySelectorAll('#v-comp [data-esp]')].every(x=>{const c=COMP.find(k=>k[0]===x.dataset.esp); return podePegarAgora(c[0],c[2],c[6]);});
           document.getElementById('soAgora').click(); return {link, on, soAgoraOk, off:E.ui.soAgora}; }""")

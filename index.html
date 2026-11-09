@@ -1520,10 +1520,10 @@ function verComp(){
         : 'border-color:rgba(143,156,232,.25);opacity:.62'}">
       <div class="g-topo" data-esp="${esc(esp)}" style="cursor:pointer;padding:12px 14px;gap:8px;flex-wrap:wrap">
         <b>${esc(esp)}</b><span class="tag critter">${esc(onde)}</span>${selo}${(()=>{ const n=vars.filter(([v,,q])=>!E.comp[chaveComp(esp,v)]&&situacaoHoje(q)==='now').length; return n?'<span class="tag agora">'+n+' out now</span>':''; })()}
-        <span class="tag ${ok===lista.length?'ok':''}" style="margin-left:auto;${ok===lista.length?'background:rgba(95,208,138,.2);color:#a9f0c4':''}">${ok}/${lista.length}</span>
+        <a class="wiki-esp" href="${wiki(esp)}" target="_blank" rel="noopener" style="margin-left:auto;font-size:11px;color:var(--peri);text-decoration:none">wiki</a><span class="tag ${ok===lista.length?'ok':''}" style="${ok===lista.length?'background:rgba(95,208,138,.2);color:#a9f0c4':''}">${ok}/${lista.length}</span>
       </div>
       ${aberto?`<div style="padding:0 14px 14px;border-top:1px solid rgba(143,156,232,.25);padding-top:11px">
-      <div class="g-meta" style="margin-top:0"><a href="${wiki(esp)}" target="_blank" rel="noopener">Open ${esc(esp)} on the wiki</a><br>
+      <div class="g-meta" style="margin-top:0">
         ${fav?`Favourite: <em>${esc(fav)}</em><br>`:''}
         ${gosta?`Also likes: <em>${esc(gosta)}</em><br>`:''}
         ${como?`Taming: <em>${esc(como)}</em><br>`:''}
@@ -1550,6 +1550,7 @@ function verComp(){
   el.innerHTML=h;
   const sa=document.getElementById('soAgora'); if(sa) sa.onclick=()=>{ E.ui.soAgora=!E.ui.soAgora; salvar(); verComp(); };
   if(compAberto) pedeFotos(compAberto);
+  el.querySelectorAll('.wiki-esp').forEach(a=>a.onclick=e=>e.stopPropagation());
   el.querySelectorAll('[data-esp]').forEach(x=>x.onclick=()=>{
     compAberto = compAberto===x.dataset.esp ? null : x.dataset.esp; verComp();
   });
