@@ -1373,8 +1373,9 @@ function verNow(){
     if(temArea(lugar)!==true && temArea(onde)!==true) return;
     (bios[lugar]=bios[lugar]||[]).push({esp,v,q});
   }));
-  const nomes=Object.keys(bios).sort();
-  if(!nomes.length){ el.innerHTML='<p class="vazio">Nothing to show yet: tick the biomes you have opened on the Map tab, or you have tamed every colour you can reach.</p>'; return; }
+  /* bioma sem nenhum bicho em nenhuma das horas mostradas sai da grade */
+  const nomes=Object.keys(bios).sort().filter(b=>horas.some(d=>bios[b].some(x=>apareceNa(x.q,d))));
+  if(!nomes.length){ el.innerHTML='<p class="vazio">Nothing to catch in the next few hours. Tick the biomes you have opened on the Map tab, or check back later.</p>'; return; }
   const usadas=new Set();
   let h=`<h2 class="secao">What you can catch, hour by hour</h2>
     <div class="tv" style="grid-template-columns:minmax(92px,1.1fr) repeat(${cols},1fr)"><div class="hd" style="text-align:left">Biome</div>`+

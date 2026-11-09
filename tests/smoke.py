@@ -223,6 +223,10 @@ async def main():
           const rows=document.querySelectorAll('#v-now .bio').length, hd=document.querySelectorAll('#v-now .hd').length;
           const b=document.querySelector('#v-now [data-ir]'); const esp=b&&b.dataset.ir; if(b) b.click();
           return {rows, hd, foi:!document.getElementById('v-comp').classList.contains('oculto')&&compAberto===esp}; }""")
+        vaz = await pg.evaluate("""()=>{ document.querySelector('.aba[data-v="now"]').click();
+          return [...document.querySelectorAll('#v-now .bio')].filter(b=>{ let c=b.nextElementSibling, n=0;
+            while(c && !c.classList.contains('bio')){ n+=c.querySelectorAll('[data-ir]').length; c=c.nextElementSibling; } return n===0; }).map(b=>b.textContent); }""")
+        ok(not vaz, f"Now tab has no empty biome rows (empty: {vaz})")
         ok(nw["rows"] >= 5 and nw["hd"] == 4 and nw["foi"], f"Now tab: one row per opened biome, 3 hours on a phone in portrait, tap opens the companion (got {nw})")
 
         print("7. Size sanity")
