@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 HTML = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "index.html"
 URL = HTML.as_uri()
 
-TABS = ["areas", "pers", "miss", "comp", "guia", "prog"]
+TABS = ["areas", "pers", "miss", "comp", "now", "guia", "prog"]
 falhas, avisos = [], []
 
 def ok(cond, msg):
@@ -59,7 +59,7 @@ async def main():
             await pg.click(f'[data-v="{t}"]')
             await pg.wait_for_timeout(150)
             vis = await pg.evaluate(
-                "()=>['areas','pers','miss','comp','guia','prog']"
+                "()=>['areas','pers','miss','comp','now','guia','prog']"
                 ".filter(v=>getComputedStyle(document.getElementById('v-'+v)).display!=='none')")
             ok(vis == [t], f"tab '{t}' shows only itself (visible: {vis})")
 
@@ -218,6 +218,12 @@ async def main():
           window.fetch=velho; gsAtivo=false; GS_URL=''; GS_SENHA=null; localStorage.removeItem('my-valley-img-Foxes'); return [n,m]; }""")
         ok(foto == [1, 0], f"photo shows when the script sends one; an older script (no photos) shows none (got {foto})")
         ok(not erros, f"no errors after the companions checks ({erros[:1]})")
+        nw = await pg.evaluate("""()=>{ AREAS.filter(g=>g.g==='Dreamlight Valley').forEach(g=>g.itens.forEach(x=>E.areas[g.g+'|'+x.n]=1));
+          document.querySelector('.aba[data-v="now"]').click();
+          const rows=document.querySelectorAll('#v-now .bio').length, hd=document.querySelectorAll('#v-now .hd').length;
+          const b=document.querySelector('#v-now [data-ir]'); const esp=b&&b.dataset.ir; if(b) b.click();
+          return {rows, hd, foi:!document.getElementById('v-comp').classList.contains('oculto')&&compAberto===esp}; }""")
+        ok(nw["rows"] >= 5 and nw["hd"] == 4 and nw["foi"], f"Now tab: one row per opened biome, 3 hours on a phone in portrait, tap opens the companion (got {nw})")
 
         print("7. Size sanity")
         n = await pg.evaluate("()=>({guide:INDEX.length, chars:CHARS.length, recipes:INDEX.filter(i=>i.t==='recipe').length})")
