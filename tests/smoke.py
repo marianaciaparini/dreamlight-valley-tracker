@@ -227,7 +227,7 @@ async def main():
           return [...document.querySelectorAll('#v-now .bio')].map(b=>b.dataset.bio)
             .filter(b=>!document.querySelectorAll('#v-now .prog[data-bio="'+CSS.escape(b)+'"]').length); }""")
         ok(not vaz, f"Now tab has no empty biome rows (empty: {vaz})")
-        ok(nw["rows"] >= 5 and nw["hd"] == 5 and nw["foi"], f"Now tab: one row per opened biome, 4 hours, tap opens the companion (got {nw})")
+        ok(nw["rows"] >= 5 and nw["hd"] == 17 and nw["foi"], f"Now tab: one row per opened biome, 16 hours, tap opens the companion (got {nw})")
         tv = await pg.evaluate("""()=>{ /* sabado 14h: Red Fox (Sat 4pm-10pm) entra as 16h e ocupa 2 colunas; Black Fox (Sat o dia todo) ocupa as 4 */
           const real=Date; const fixo=new real(2026,10,7,14,10).getTime();
           window.Date=class extends real{ constructor(...a){ super(...(a.length?a:[fixo])); } static now(){ return fixo; } };
@@ -236,7 +236,7 @@ async def main():
           const col=c=>{ const b=document.querySelector('#v-now .prog[data-ir="Foxes"][data-cor="'+c+'"]'); return b?b.style.gridColumn.replace(/ /g,''):null; };
           const r={red:col('Red'), black:col('Black'), txt:(document.querySelector('#v-now .prog[data-cor="Red"][data-ir="Foxes"] em')||{}).textContent};
           window.Date=real; verNow(); return r; }""")
-        ok(tv == {"red": "4/6", "black": "2/6", "txt": "from 4pm · until 10pm"}, f"TV guide: a colour is one block across the hours it is out (got {tv})")
+        ok(tv == {"red": "4/10", "black": "2/12", "txt": "from 4pm · until 10pm"}, f"TV guide: a colour is one block across the hours it is out (got {tv})")
 
         cores = await pg.evaluate("""()=>{ const out=[]; COMP.forEach(c=>{ compAberto=c[0]; verComp();
           c[6].forEach(v=>{ const card=document.querySelector('#v-comp .cor-cx[data-comp="'+c[0]+'|'+v[0]+'"]').closest('.cor-lin');
@@ -244,6 +244,23 @@ async def main():
           compAberto=null; verComp(); return out; }""")
         ok(len(cores) == 86 and not [c for c in cores if c.startswith('SEM')] and "Emerald_Sunbird" in cores and "Skunk" in cores and "Blue_and_Red_Striped_Cobra" in cores,
            f"every colour card links to its own wiki page ({[c for c in cores if c.startswith('SEM')][:3]})")
+        consist = await pg.evaluate("""()=>{ const real=Date, erros=[];
+          AREAS.filter(g=>g.g!=='Eternity Isle').forEach(g=>g.itens.forEach(x=>E.areas[g.g+'|'+x.n]=1));
+          AREAS.filter(g=>g.g==='Eternity Isle').forEach(g=>g.itens.forEach(x=>E.areas[g.g+'|'+x.n]=0));
+          for(const [d,h] of [[7,14],[8,10],[9,3],[12,20]]){
+            const fixo=new real(2026,10,d,h,10).getTime();
+            window.Date=class extends real{ constructor(...a){ super(...(a.length?a:[fixo])); } static now(){ return fixo; } };
+            verNow();
+            const naNow=new Set([...document.querySelectorAll('#v-now .prog')].filter(b=>/grid-column: 2 \//.test(b.getAttribute('style'))||b.style.gridColumnStart==='2').map(b=>b.dataset.ir+'|'+b.dataset.cor));
+            COMP.forEach(c=>{ compAberto=c[0]; verComp();
+              c[6].forEach(v=>{ const k=c[0]+'|'+v[0]; if(E.comp[k]) return;
+                const card=document.querySelector('#v-comp .cor-cx[data-comp="'+k+'"]').closest('.cor-lin');
+                const verde=!!card.querySelector('.tag.agora');
+                if(verde!==naNow.has(k)) erros.push(d+'/'+h+'h '+k+' companions='+verde+' now='+naNow.has(k)); }); });
+          }
+          window.Date=real; compAberto=null; verComp(); verNow(); return erros; }""")
+        ok(not consist, f"green 'out now' in Companions matches the Now column exactly (differences: {consist[:4]})")
+
         print("13. Fed today + count to tame")
         fed = await pg.evaluate("""()=>{ const real=Date; let dia=7;
           const usa=d=>{ const fixo=new real(2026,10,d,14,10).getTime();

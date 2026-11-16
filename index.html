@@ -96,7 +96,13 @@ h2.secao .conta{margin-left:auto;font-size:11px;color:var(--texto-fraco);
 .tag.hoje{background:rgba(242,196,92,.22);color:#f6d68a}
 .tag.agora{background:rgba(95,208,138,.28);color:#bff5d2}
 .cor-lin.com-foto{grid-template-columns:auto 1fr auto}
-.tv{display:grid;border:1px solid rgba(143,156,232,.3);border-radius:12px;overflow:hidden;background:#1a2156}
+.tv-rola{overflow-x:auto;scroll-snap-type:x proximity;border:1px solid rgba(143,156,232,.3);border-radius:12px;-webkit-overflow-scrolling:touch}
+.tv{display:grid;background:#1a2156;width:max-content}
+.tv .hd{scroll-snap-align:start}
+.tv .fixo{position:sticky;left:0;z-index:3;background:#121845}
+.tv .hd.fixo{background:#2b3478}
+.tv .bio.fixo{background:#121845}
+.tv .vira{border-left:2px solid rgba(242,196,92,.6)}
 .tv>div,.tv>.prog{min-width:0}
 .tv .hd{background:rgba(143,156,232,.22);font-weight:600;text-align:center;padding:8px 4px;font-size:13px;border-bottom:1px solid rgba(143,156,232,.3)}
 .tv .hd.ag{background:var(--ouro);color:#2a1c00}
@@ -104,13 +110,14 @@ h2.secao .conta{margin-left:auto;font-size:11px;color:var(--texto-fraco);
 .tv .fundo{border-left:1px solid rgba(143,156,232,.15);border-bottom:1px solid rgba(143,156,232,.25)}
 .tv .fundo.ag{background:rgba(242,196,92,.10)}
 .tv .prog{position:relative;z-index:1;margin:3px;display:flex;align-items:center;gap:5px;padding:3px 6px 3px 3px;border-radius:9px;
-  border:1px solid rgba(143,156,232,.45);background:rgba(43,52,120,.92);color:var(--texto);text-align:left;cursor:pointer;overflow:hidden;font-size:11.5px;line-height:1.25}
-.tv .prog{padding-right:34px}
+  border:1px solid rgba(143,156,232,.45);background:rgba(43,52,120,.92);color:var(--texto);text-align:left;cursor:pointer;overflow:clip;font-size:11.5px;line-height:1.25}
+.tv .prog{padding-right:6px}
 .tv .prog.comido{opacity:.5}
 .tv .prog .conta{color:#f6d68a}
-.tv .fed{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:7px;
+.tv .fed{flex:none;margin-left:4px;width:24px;height:24px;border-radius:7px;
   border:2px solid rgba(143,156,232,.7);background:transparent;color:#2a1c00;font-weight:700;line-height:20px;padding:0;cursor:pointer}
 .tv .fed[aria-pressed="true"]{background:var(--verde);border-color:var(--verde)}
+.tv .prog-in{position:sticky;left:calc(var(--bio) + 6px);display:flex;align-items:center;gap:5px;min-width:0;max-width:100%}
 .tv .prog img{width:34px;height:34px;object-fit:contain;flex:none}
 .tv .prog span{overflow:hidden}
 .tv .prog em{color:#c9cff0;font-style:normal;font-size:10.5px}
@@ -1333,9 +1340,14 @@ function situacaoHoje(txt,quando){
   return prox===null?null:{mais:prox};
 }
 const horaTxt=h=>h===0?'midnight':h===12?'noon':(h%12)+(h<12?'am':'pm');
+/* o local da cor esta aberto no Map? true / false (trancado) / null (o Map nao tem esse local).
+   Vale o local da propria cor; o da especie so' entra quando o da cor nao existe no Map. */
+function localAberto(onde,vonde){
+  const a=temArea(vonde||onde); if(a!==null) return a;
+  return vonde ? temArea(onde) : null;
+}
 function podePegarAgora(esp,onde,vars){
-  return vars.some(([v,vonde,quando])=>!E.comp[chaveComp(esp,v)] && situacaoHoje(quando)==='now'
-    && (temArea(vonde||onde)===true || temArea(onde)===true));
+  return vars.some(([v,vonde,quando])=>!E.comp[chaveComp(esp,v)] && situacaoHoje(quando)==='now' && localAberto(onde,vonde)===true);
 }
 /* fotos: so' quando a planilha esta ligada e o script dela tem a pasta de fotos */
 const FOTOS={};
@@ -1388,7 +1400,9 @@ function alimenta(esp,v){
   }
 }
 function verNow(){
-  const el=document.getElementById('v-now'), agora=new Date(), cols=4;
+  const el=document.getElementById('v-now'), agora=new Date(), cols=16, naTela=4;
+  const rolagem=(el.querySelector('.tv-rola')||{}).scrollLeft||0;
+  const DSC=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const hora0=new Date(agora.getFullYear(),agora.getMonth(),agora.getDate(),agora.getHours(),0);
   const em=k=>new Date(hora0.getFullYear(),hora0.getMonth(),hora0.getDate(),hora0.getHours()+k,0);
   const horas=[...Array(cols)].map((_,k)=>em(k));
@@ -1396,7 +1410,7 @@ function verNow(){
   COMP.forEach(([esp,,onde,,,,vars])=>vars.forEach(([v,vonde,q])=>{
     if(E.comp[chaveComp(esp,v)]) return;
     const lugar=vonde||onde;
-    if(temArea(lugar)!==true && temArea(onde)!==true) return;
+    if(localAberto(onde,vonde)!==true) return;
     (bios[lugar]=bios[lugar]||[]).push({esp,v,q});
   }));
   /* cada cor vira 'programas': trechos seguidos de horas em que ela aparece; empilhados em faixas quando se sobrepoem */
@@ -1408,11 +1422,10 @@ function verNow(){
       for(let k=0;k<cols;k++){
         if(!tem[k]||(k&&tem[k-1])) continue;
         let f=k; while(f<cols&&tem[f]) f++;
-        /* ate' quando vai: procura so' ate' a meia-noite de hoje; se continua no dia seguinte, diz 'past midnight' */
-        const meiaNoite=24-hora0.getHours(); let fimReal=f; while(fimReal<meiaNoite&&apareceNa(x.q,em(fimReal))) fimReal++;
-        const passa=fimReal>=meiaNoite&&apareceNa(x.q,em(meiaNoite));
+        /* ate' quando vai de verdade (pode passar do fim da grade): olha ate' 24 horas para a frente */
+        let fimReal=f; while(fimReal<k+24&&apareceNa(x.q,em(fimReal))) fimReal++;
         const desdeAntes=k===0&&apareceNa(x.q,em(-1));
-        progs.push({...x,ini:k,fim:f,ate:passa?null:em(fimReal).getHours(),desdeAntes});
+        progs.push({...x,ini:k,fim:f,ate:fimReal>=k+24?null:em(fimReal),desdeAntes});
       }
     });
     if(!progs.length) return;
@@ -1421,30 +1434,36 @@ function verNow(){
     progs.forEach(g=>{ let n=faixas.findIndex(fim=>fim<=g.ini); if(n<0){ n=faixas.length; faixas.push(0); } faixas[n]=g.fim; g.faixa=n; });
     canais.push({b,progs,n:faixas.length});
   });
-  if(!canais.length){ el.innerHTML='<p class="vazio">Nothing to catch in the next 4 hours. Tick the biomes you have opened on the Map tab, or check back later.</p>'; return; }
+  if(!canais.length){ el.innerHTML='<p class="vazio">Nothing to catch in the next 16 hours. Tick the biomes you have opened on the Map tab, or check back later.</p>'; return; }
   const usadas=new Set();
-  let h=`<h2 class="secao">What you can catch in the next 4 hours</h2>
-    <div class="tv" style="grid-template-columns:minmax(84px,.9fr) repeat(${cols},1fr)"><div class="hd" style="text-align:left;grid-row:1;grid-column:1">Biome</div>`+
-    horas.map((d,k)=>`<div class="hd ${k?'':'ag'}" style="grid-row:1;grid-column:${k+2}">${k?horaTxt(d.getHours()):'Now · '+horaTxt(d.getHours())}</div>`).join('');
+  /* largura: a coluna do bioma fica parada; 4 horas cabem na tela e as outras 12 aparecem deslizando para o lado */
+  const largura=Math.max(300,(el.clientWidth||document.querySelector('main')?.clientWidth||window.innerWidth)-2);
+  const bioW=Math.round(Math.min(150,Math.max(84,largura*.2))), colW=Math.floor((largura-bioW)/naTela);
+  const dia=d=>d.getDate()!==hora0.getDate()?' '+DSC[d.getDay()]:'';
+  let h=`<h2 class="secao">Next 16 hours<span class="conta">swipe \u2192</span></h2>
+    <div class="tv-rola" style="scroll-padding-left:${bioW}px;--bio:${bioW}px"><div class="tv" style="grid-template-columns:${bioW}px repeat(${cols},${colW}px)">
+    <div class="hd fixo" style="text-align:left;grid-row:1;grid-column:1">Biome</div>`+
+    horas.map((d,k)=>`<div class="hd ${k?'':'ag'} ${d.getHours()===0?'vira':''}" style="grid-row:1;grid-column:${k+2}">${k?horaTxt(d.getHours())+(d.getHours()===0?' \u00b7 '+DSC[d.getDay()]:''):'Now \u00b7 '+horaTxt(d.getHours())}</div>`).join('');
   let linha=2;
   canais.forEach(({b,progs,n})=>{
-    h+=`<div class="bio" data-bio="${esc(b)}" style="grid-row:${linha}/span ${n};grid-column:1">${esc(b)}</div>`;
-    for(let k=0;k<cols;k++) h+=`<div class="fundo ${k?'':'ag'}" style="grid-row:${linha}/span ${n};grid-column:${k+2}"></div>`;
+    h+=`<div class="bio fixo" data-bio="${esc(b)}" style="grid-row:${linha}/span ${n};grid-column:1">${esc(b)}</div>`;
+    for(let k=0;k<cols;k++) h+=`<div class="fundo ${k?'':'ag'} ${horas[k].getHours()===0?'vira':''}" style="grid-row:${linha}/span ${n};grid-column:${k+2}"></div>`;
     progs.forEach(g=>{
       usadas.add(g.esp);
       const f=FOTOS[g.esp]&&FOTOS[g.esp][g.v], nome=g.v+' '+g.esp;
-      const quando=(g.ini===0? (g.desdeAntes?'on now':'starts now') : 'from '+horaTxt(horas[g.ini].getHours()))+
-        (g.ate===null?' · past midnight':' · until '+horaTxt(g.ate));
+      const ini=horas[g.ini];
+      const quando=(g.ini===0? (g.desdeAntes?'on now':'starts now') : 'from '+horaTxt(ini.getHours())+dia(ini))+
+        (g.ate===null?' \u00b7 for a day or more':' \u00b7 until '+horaTxt(g.ate.getHours())+(g.ate.getDate()!==ini.getDate()&&g.ate.getHours()!==0?' '+DSC[g.ate.getDay()]:''));
       const kf=chaveComp(g.esp,g.v), ja=comeuHoje(kf), vz=vezesComeu(kf), tot=totalDomar(g.esp,g.v);
       const conta=vz?('fed '+vz+(tot?' of '+tot:'')):(tot?'0 of '+tot+' feedings':'');
       h+=`<div class="prog ${ja?'comido':''}" role="button" tabindex="0" data-ir="${esc(g.esp)}" data-cor="${esc(g.v)}" data-bio="${esc(b)}" title="${esc(nome)}"
         style="grid-row:${linha+g.faixa};grid-column:${g.ini+2}/${g.fim+2}">
-        ${f?`<img src="${f}" alt="${esc(nome)}">`:''}<span><b>${esc(g.v)}</b> ${esc(g.esp)}<br><em>${ja?'fed today':esc(quando)}</em>${conta?`<br><em class="conta">${esc(conta)}</em>`:''}</span>
-        <button class="fed" data-feed="${esc(kf)}" aria-pressed="${ja}" aria-label="Fed ${esc(nome)} today">${ja?'\u2713':''}</button></div>`;
+        <span class="prog-in">${f?`<img src="${f}" alt="${esc(nome)}">`:''}<span><b>${esc(g.v)}</b> ${esc(g.esp)}<br><em>${ja?'fed today':esc(quando)}</em>${conta?`<br><em class="conta">${esc(conta)}</em>`:''}</span>
+        <button class="fed" data-feed="${esc(kf)}" aria-pressed="${ja}" aria-label="Fed ${esc(nome)} today">${ja?'\u2713':''}</button></span></div>`;
     });
     linha+=n;
   });
-  el.innerHTML=h+`</div><p class="nota" style="margin-top:8px">Like a TV guide: each block is one colour you have not tamed, stretched over the hours it is out, in biomes you have opened. Tick the box when you feed one (only the first feeding of the day counts; it resets at midnight). Tap the picture to open it in Companions. Uses this device's clock and changes every hour.${gsAtivo?'':' Pictures appear when your spreadsheet is connected and your script has the pictures folder.'}</p>`;
+  el.innerHTML=h+`</div></div><p class="nota" style="margin-top:8px">Swipe the grid sideways to see up to 15 hours ahead. Like a TV guide: each block is one colour you have not tamed, stretched over the hours it is out, in biomes you have opened. Tick the box when you feed one (only the first feeding of the day counts; it resets at midnight). Tap the picture to open it in Companions. Uses this device's clock and changes every hour.${gsAtivo?'':' Pictures appear when your spreadsheet is connected and your script has the pictures folder.'}</p>`;
   el.querySelectorAll('.fed').forEach(x=>x.onclick=e=>{
     e.stopPropagation(); const [esp,v]=x.dataset.feed.split('|'); alimenta(esp,v); verNow();
   });
@@ -1452,6 +1471,7 @@ function verNow(){
     compAberto=x.dataset.ir; document.querySelector('.aba[data-v="comp"]').click();
     const alvo=document.querySelector('#v-comp [data-esp="'+CSS.escape(compAberto)+'"]'); if(alvo) alvo.scrollIntoView({block:'start'});
   });
+  const rola=el.querySelector('.tv-rola'); if(rola&&rolagem) rola.scrollLeft=rolagem;
   usadas.forEach(e=>pedeFotos(e));
 }
 /* pagina da wiki de cada cor: "<Cor> <Bicho>" (conferido na wiki em 08/11/2026: as 86 existem; as Classic de Skunk, Goose e Sweet Bee sao so' o nome do bicho) */
@@ -1525,7 +1545,7 @@ function verComp(){
         ? 'border-color:var(--verde);box-shadow:inset 4px 0 0 var(--verde)'
         : 'border-color:rgba(143,156,232,.25);opacity:.62'}">
       <div class="g-topo" data-esp="${esc(esp)}" style="cursor:pointer;padding:12px 14px;gap:8px;flex-wrap:wrap">
-        <b>${esc(esp)}</b><span class="tag critter">${esc(onde)}</span>${selo}${(()=>{ const n=vars.filter(([v,,q])=>!E.comp[chaveComp(esp,v)]&&situacaoHoje(q)==='now').length; return n?'<span class="tag agora">'+n+' out now</span>':''; })()}
+        <b>${esc(esp)}</b><span class="tag critter">${esc(onde)}</span>${selo}${(()=>{ const n=vars.filter(([v,vo,q])=>!E.comp[chaveComp(esp,v)]&&situacaoHoje(q)==='now'&&localAberto(onde,vo)===true).length; return n?'<span class="tag agora">'+n+' out now</span>':''; })()}
         <a class="wiki-esp" href="${wiki(esp)}" target="_blank" rel="noopener" style="margin-left:auto;font-size:11px;color:var(--peri);text-decoration:none">wiki</a><span class="tag ${ok===lista.length?'ok':''}" style="${ok===lista.length?'background:rgba(95,208,138,.2);color:#a9f0c4':''}">${ok}/${lista.length}</span>
       </div>
       ${aberto?`<div style="padding:0 14px 14px;border-top:1px solid rgba(143,156,232,.25);padding-top:11px">
@@ -1538,11 +1558,12 @@ function verComp(){
       </div>
       <div class="cor-tab">${lista.map(([v,vonde,quando])=>({v,vonde,quando,feito:!!E.comp[chaveComp(esp,v)]}))
         .sort((a,b)=>a.feito-b.feito).map(({v,vonde,quando,feito})=>{
-          const k=chaveComp(esp,v), lugar=vonde||onde, ab=temArea(lugar), sit=feito?null:situacaoHoje(quando), foto=FOTOS[esp]&&FOTOS[esp][v];
-          return `<div class="cor-lin ${feito?'feito':''} ${foto?'com-foto':''} ${sit==='now'?'ag':sit?'mt':''}">
+          const k=chaveComp(esp,v), lugar=vonde||onde, ab=temArea(lugar), sit=feito?null:situacaoHoje(quando), foto=FOTOS[esp]&&FOTOS[esp][v], la=localAberto(onde,vonde), alcanca=la===true;
+          return `<div class="cor-lin ${feito?'feito':''} ${foto?'com-foto':''} ${!alcanca?'':sit==='now'?'ag':sit?'mt':''}">
             <button class="cor-cx" data-comp="${esc(k)}" aria-pressed="${feito}" aria-label="Tamed: ${esc(v==='—'?esp:v)}">${feito?'✓':''}</button>
             <div class="cor-nome"><span class="cor-ponto" style="background:${pontoCor(v)}"></span>${esc(v==='—'?'Tamed':v)}
-              ${sit==='now'?'<span class="tag agora">out now</span>':sit?'<span class="tag hoje">later today, from '+horaTxt(sit.mais)+'</span>':''}
+              ${sit&&!alcanca?'<span class="tag">'+(sit==='now'?'out now':'later today')+' \u00b7 '+(la===false?'biome locked':'biome not on your Map')+'</span>'
+                :sit==='now'?'<span class="tag agora">out now</span>':sit?'<span class="tag hoje">later today, from '+horaTxt(sit.mais)+'</span>':''}
               ${feito?'<span class="tag" style="background:rgba(95,208,138,.2);color:#a9f0c4">tamed</span>':''}
               <a class="wiki-cor" href="${wiki(paginaCor(esp,v))}" target="_blank" rel="noopener" style="margin-left:auto;font-size:11px;font-weight:400;color:var(--peri);text-decoration:none">wiki</a></div>
             ${foto?`<img class="cor-foto" src="${foto}" alt="${esc(v)} ${esc(esp)}" loading="lazy">`:''}
